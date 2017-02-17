@@ -5,7 +5,8 @@ This a Proof of concept of aws lambda handler.
 This repo include some scripts that helps in managing the release in aws lambda
 functions with python.
 
- 1. [ ] Create a example function, something writting into s3.
+ 1. [ ] Create a example function, something writting into s3. Remember to
+    customize the env var `S3_BUCKET` in `local_simulation.sh` script.
  1. [ ] Function description with YAML.
  1. [ ] Create a lambda function.
  1. [ ] Manage the upload of new revisions and production.
