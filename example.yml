@@ -1,0 +1,20 @@
+FunctionName: awslambda-poc
+Runtime: python2.7
+Role: arn:aws:iam::...
+Handler: example.lambda_handler
+Description: A example function  # optional
+Code:
+   S3Bucket: write_a_backet_name_here
+   S3KeyPath: example
+   Directory: example
+MemorySize: 128,
+Timeout: 120,  # optional
+VpcConfig:
+    SubnetIds:
+        - string
+    SecurityGroupIds:
+        - string
+Environment:  # optional
+    KEY1: VALUE1,
+    KEY2: VALUE2,
+    KEY3: VALUE3,

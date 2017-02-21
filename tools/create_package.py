@@ -5,36 +5,8 @@
 #
 from os import path
 import sys
-from zipfile import PyZipFile
 
-
-
-class LambdaPackage:
-
-    def __init__(self, package_name, release, source_directory, target_directory='.'):
-        self.package_name = package_name
-        self.release = release
-        self.source_directory = source_directory
-        self.target_directory = target_directory
-
-        self.filename = "{package_name}-{release}.zip".format(
-            target_directory=target_directory,
-            package_name=package_name,
-            release=release)
-
-        self.zipf = PyZipFile(path.join(target_directory, self.filename), 'w')
-        self.zipf.writestr('PACKAGE_NAME', package_name)
-        self.zipf.writestr('RELEASE', release)
-
-    def add_pyfiles(self):
-        self.zipf.writepy(self.source_directory)
-
-    def add_otherfiles(self, files):
-        for filename in files:
-            self.zipf.write(filename)
-
-    def save(self):
-        self.zipf.close()
+from awslambda import LambdaPackage
 
 
 def _get_args():
