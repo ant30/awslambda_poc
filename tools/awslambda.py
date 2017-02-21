@@ -141,6 +141,7 @@ class AwsLambdaManager:
 
     def create_package(self, directory, package_name, release_tag):
         """ Create a temporary zip package"""
+        logger.info("Creating zip package")
         lp = LambdaPackage(package_name,
                            release_tag,
                            directory,
@@ -150,7 +151,8 @@ class AwsLambdaManager:
         self.local_filename = lp.filename
 
     def upload_package(self, filename=None):
-
+        """ Upload the package to S3 """
+        logger.info("Uploading the package to S3")
         s3f = S3FunctionUploader(self.config['Code']['S3Bucket'])
         self.s3_filename = path.join(
             self.config['Code']['S3KeyPath'],
@@ -162,6 +164,7 @@ class AwsLambdaManager:
 
     def create_function(self):
         """ Create a function in aws lambda """
+        logger.info("Preparing stuf to create function")
         self.create_package(
             self.config['Code']['Directory'],
             self.config['FunctionName'],
@@ -202,6 +205,7 @@ class AwsLambdaManager:
 
         function_definition['Publish'] = False
 
+        logger.info("Creating function")
         return self.aws_lambda.create_function(**function_definition)
 
     def function_exists(self):
@@ -216,7 +220,7 @@ class AwsLambdaManager:
         except:  # Change this to handler the correct exception
             return False
 
-    def generate_revision(self, s3_filename, tag="devel"):
+    def generate_release(self, tag="devel"):
         """
             publish version in lambda with alias "tag"
         """
