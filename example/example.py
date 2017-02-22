@@ -63,15 +63,17 @@ class TimestampWritterHandler:
     def lambda_handler(self):
         logger.debug('lambda_handler was called')
         s3 = S3BucketHandler(self.s3_bucket)
-        s3.put(self.s3_filename, self._get_timestamp())
+        content = self._get_timestamp()
+        s3.put(self.s3_filename, content)
+        return content
 
     __call__ = lambda_handler
 
 
 def lambda_handler(event, context):
-    TimestampWritterHandler(event, context)()
+    return TimestampWritterHandler(event, context)()
 
 
 if __name__ == "__main__":
     """This emulate a lambda handler call in a local system"""
-    TimestampWritterHandler(object(), {})()
+    print TimestampWritterHandler(object(), {})()
