@@ -1,7 +1,7 @@
 import logging
 import os
 from os import path
-from zipfile import PyZipFile
+import zipfile
 
 from git import Repo
 import boto3
@@ -80,13 +80,18 @@ class LambdaPackage:
             package_name=package_name,
             release=release)
 
-        self.zipf = PyZipFile(path.join(target_directory, self.filename), 'w')
+        self.zipf = zipfile.PyZipFile(
+            path.join(target_directory, self.filename),
+            'w',
+            zipfile.ZIP_DEFLATED)
         self.zipf.writestr('PACKAGE_NAME', package_name)
         self.zipf.writestr('RELEASE', release)
 
     def add_pyfiles(self):
-        self.zipf.writepy(self.source_directory,
-                          path.basename(self.source_directory))
+        oldpwd = os.getcwd()
+        os.chdir(path.basename(self.source_directory))
+        self.zipf.writepy('.')
+        os.chdir(oldpwd)
 
     def add_otherfiles(self, files):
         for filename in files:
