@@ -50,13 +50,15 @@ class ConfigYamlReader:
                 SecurityGroupIds:
                     - string
             Environment:  # optional
-                KEY1: VALUE1
-                KEY2: VALUE2
-                KEY3: VALUE3
+                Variables:
+                    KEY1: VALUE1
+                    KEY2: VALUE2
+                    KEY3: VALUE3
         """
         self.configfile = configfile
         with open(self.configfile, 'r') as f:
             self.config = yaml.load(f)
+
 
     def function_properties_check(self):
         """
@@ -151,14 +153,46 @@ class AwsLambdaManager:
                     ],
                 },
                 'Environment': {  # optional
-                    'KEY1': 'VALUE1',
-                    'KEY2': 'VALUE2',
-                    'KEY3': 'VALUE3',
+                    'Variables': {
+                        'KEY1': 'VALUE1',
+                        'KEY2': 'VALUE2',
+                        'KEY3': 'VALUE3',
+                    }
                 },
             }
         """
         self.config = config
         self.aws_lambda = boto3.client('lambda')
+
+    def get_function_configuration(self):
+        """
+            Return a dict with the basic function properties valid for aws
+        """
+        # Set required properties
+        function_definition = {
+            key: self.config[key]
+            for key in (
+                'FunctionName',
+                'Runtime',
+                'Role',
+                'Handler',
+                'MemorySize',
+            )
+        }
+
+        # Set optional properties
+        function_definition.update({
+            key: self.config[key]
+            for key in (
+                'Environment',
+                'Description',
+                'Timeout',
+                'VpcConfig',
+            )
+            if self.config.get(key)
+        })
+
+        return function_definition
 
     def create_package(self, directory, package_name, release_tag=''):
         """ Create a temporary zip package"""
@@ -198,29 +232,7 @@ class AwsLambdaManager:
 
         self.upload_package()
 
-        # Set required properties
-        function_definition = {
-            key: self.config[key]
-            for key in (
-                'FunctionName',
-                'Runtime',
-                'Role',
-                'Handler',
-                'MemorySize',
-            )
-        }
-
-        # Set optional properties
-        function_definition.update({
-            key: self.config[key]
-            for key in (
-                'Environment',
-                'Description',
-                'Timeout',
-                'VpcConfig',
-            )
-            if self.config.get(key)
-        })
+        function_definition = self.get_function_configuration()
 
         # Set the first release Code block
         function_definition['Code'] = {
@@ -298,8 +310,13 @@ class AwsLambdaManager:
         """
             update function configuration without code update
         """
-        raise NotImplementedError()
 
+        logger.info("Update function config")
+        function_definition = self.get_function_configuration()
+
+        self.aws_lambda.update_function_configuration(
+            **function_definition
+        )
 
 
     def promote_revision(self, revision):

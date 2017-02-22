@@ -15,7 +15,7 @@ class CreateFunctionRelease:
 
     def __call__(self):
         if self.aws_lambda.function_exists():
-            return(self.aws_lambda.create_release())
+            return(self.aws_lambda.create_release(self.alias))
         else:
             print("Lambda function not found")
             sys.exit(1)
