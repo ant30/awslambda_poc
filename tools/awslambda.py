@@ -335,7 +335,13 @@ class AwsLambdaManager:
             Call in sync mode to the function
                 payload is a file.
         """
-        raise NotImplementedError()
+        return self.aws_lambda.invoke(
+            FunctionName=self.config['FunctionName'],
+            InvocationType='RequestResponse',
+            LogType='Tail',
+            Payload=payload or bytes(''),
+            Qualifier=revision
+        )
 
     def invoke_async(self, revision, payload):
         """
@@ -343,5 +349,4 @@ class AwsLambdaManager:
                 payload is a file.
         """
         raise NotImplementedError()
-
 
