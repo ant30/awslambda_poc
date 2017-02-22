@@ -1,12 +1,32 @@
 import logging
+import os
 from os import path
 from zipfile import PyZipFile
 
+from git import Repo
 import boto3
 import yaml
 
-
+# Global INFO for all loggers, including boto
+logging.basicConfig(level=os.environ.get('LOG_LEVEL', logging.INFO))
 logger = logging.getLogger('LambdaManager')
+
+
+def _get_git_release(repo_dir='.'):
+    repo = Repo(repo_dir)
+    hash_name = repo.head.commit.hexsha
+    if len(repo.index.diff(None)) > 0:
+        # Changes not stashed
+        hash_name += 'm'
+    try:
+        if len(repo.index.diff(HEAD)) > 0:
+            # Changes added to next commit
+            hash_name += 'h'
+    except:
+        pass
+
+    return hash_name
+
 
 
 class ConfigYamlReader:
@@ -63,7 +83,8 @@ class LambdaPackage:
         self.zipf.writestr('RELEASE', release)
 
     def add_pyfiles(self):
-        self.zipf.writepy(self.source_directory)
+        self.zipf.writepy(self.source_directory,
+                          path.basename(self.source_directory))
 
     def add_otherfiles(self, files):
         for filename in files:
@@ -139,15 +160,19 @@ class AwsLambdaManager:
         self.config = config
         self.aws_lambda = boto3.client('lambda')
 
-    def create_package(self, directory, package_name, release_tag):
+    def create_package(self, directory, package_name, release_tag=''):
         """ Create a temporary zip package"""
-        logger.info("Creating zip package")
+
+        hash_release = _get_git_release()
+        logger.info("Creating package with git release {0}".format(hash_release))
+
         lp = LambdaPackage(package_name,
-                           release_tag,
+                           hash_release + release_tag,
                            directory,
                            target_directory='.')
         lp.add_pyfiles()
         lp.save()
+        self.hash_release = hash_release
         self.local_filename = lp.filename
 
     def upload_package(self, filename=None):
@@ -203,7 +228,7 @@ class AwsLambdaManager:
             'S3Key': self.s3_filename,
         }
 
-        function_definition['Publish'] = False
+        function_definition['Publish'] = True
 
         logger.info("Creating function")
         return self.aws_lambda.create_function(**function_definition)
@@ -217,14 +242,65 @@ class AwsLambdaManager:
                 FunctionName=self.config['FunctionName']
             )
             return True
-        except:  # Change this to handler the correct exception
+        except self.aws_lambda.exceptions.ResourceNotFoundException:
             return False
 
-    def generate_release(self, tag="devel"):
+    def create_release(self, alias="devel"):
         """
             publish version in lambda with alias "tag"
         """
+        self.create_package(
+            self.config['Code']['Directory'],
+            self.config['FunctionName']
+        )
+
+        self.upload_package()
+
+        logger.info("Creating release {0}".format(self.hash_release))
+
+        response_code = self.aws_lambda.update_function_code(
+            FunctionName=self.config['FunctionName'],
+            S3Bucket=self.config['Code']['S3Bucket'],
+            S3Key=self.s3_filename,
+            Publish=True
+        )
+
+        logger.info("Created revision {0}".format(response_code['Version']))
+
+        self.update_or_create_alias(response_code['Version'], self.hash_release)
+        self.update_or_create_alias(response_code['Version'], alias)
+
+        logger.info("If config wash changed, remember to update function "
+                    "configuration")
+
+
+    def update_or_create_alias(self, version, alias):
+        try:
+            self.aws_lambda.update_alias(
+                FunctionName=self.config['FunctionName'],
+                FunctionVersion=version,
+                Name=alias)
+            logger.info("Alias '{0}' updated for version '{1}'".format(
+                alias, version
+            ))
+        except self.aws_lambda.exceptions.ResourceNotFoundException:
+            self.aws_lambda.create_alias(
+                FunctionName=self.config['FunctionName'],
+                FunctionVersion=version,
+                Name=alias
+            )
+            logger.info("Alias '{0}' created for version '{1}'".format(
+                alias, version
+            ))
+
+
+    def update_function_configuration(self):
+        """
+            update function configuration without code update
+        """
         raise NotImplementedError()
+
+
 
     def promote_revision(self, revision):
         """
