@@ -1,3 +1,4 @@
+import base64
 import logging
 import os
 from os import path
@@ -69,7 +70,8 @@ class ConfigYamlReader:
 
 class LambdaPackage:
 
-    def __init__(self, package_name, release, source_directory, target_directory='.'):
+    def __init__(self, package_name, release, source_directory,
+                 target_directory='.'):
         self.package_name = package_name
         self.release = release
         self.source_directory = source_directory
@@ -324,24 +326,45 @@ class AwsLambdaManager:
         )
 
 
-    def promote_revision(self, revision):
+    def promote_release(self, release):
         """
-            update alias "production" to "revision"
+            update alias "production" to "release"
         """
-        raise NotImplementedError()
+        logger.info("Updating production alias with revision '{0}'".format(
+                    release))
+        if release.isdigit() or release == '$LATEST':
+            version = release
+        else:
+            try:
+                response = self.aws_lambda.get_alias(
+                    FunctionName=self.config['FunctionName'],
+                    Name=release
+                )
+                version = response['FunctionVersion']
+            except self.aws_lambda.exceptions.ResourceNotFoundException:
+                logger.error("Can't found the qualifier {0} for {1}".format(
+                    release,
+                    self.config['FunctionName']
+                ))
+                return
 
-    def invoke_sync(self, revision, payload):
+        self.update_or_create_alias(version, 'production')
+
+    def invoke_sync(self, qualifier, payload):
         """
             Call in sync mode to the function
                 payload is a file.
         """
-        return self.aws_lambda.invoke(
+        response =  self.aws_lambda.invoke(
             FunctionName=self.config['FunctionName'],
             InvocationType='RequestResponse',
             LogType='Tail',
             Payload=payload or bytes(''),
-            Qualifier=revision
+            Qualifier=qualifier
         )
+        response['LogResultDecoded'] = base64.decodestring(
+            response['LogResult'])
+        return response
 
     def invoke_async(self, revision, payload):
         """

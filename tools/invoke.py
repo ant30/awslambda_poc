@@ -28,7 +28,7 @@ class LambdaInvokeFunction:
                 if self.options.async
                 else self.aws_lambda.invoke_sync)
 
-        return func(qualifier, self.options.payload)
+        return func(str(qualifier), self.options.payload)
 
 
 if __name__ == "__main__":
@@ -36,8 +36,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Create release operation')
     parser.add_argument('configfile')
     parser.add_argument('--payload', type=argparse.FileType('r'))
-    parser.add_argument('--alias', default='$LATEST')
-    parser.add_argument('--version', type=int)
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--alias', default='$LATEST')
+    group.add_argument('--version', type=int)
+
     parser.add_argument('--async', type=bool, default=False)
     args = parser.parse_args()
 

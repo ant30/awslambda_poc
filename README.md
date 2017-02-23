@@ -10,9 +10,10 @@ functions with python.
  1. [X] Function description with YAML.
  1. [X] Create a lambda function.
  1. [X] Manage the upload of new revisions and production.
- 1. [ ] Be able to launch a test event on a named version (aka devel,
+ 1. [X] Be able to launch a test event on a named version (aka devel,
     production, 0.1.1).
  1. [X] Create a script to launch sync and async tests.
+ 1. [x] Promote to production alias
  1. [ ] Docker environment to test the lambda handler instead of own PC.
  1. [ ] Allow the same codebase for multiple functions.
  1. [ ] Embedded python requirements with functions zip.
