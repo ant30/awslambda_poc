@@ -312,7 +312,6 @@ class AwsLambdaManager:
                 alias, version
             ))
 
-
     def update_function_configuration(self):
         """
             update function configuration without code update
@@ -325,6 +324,14 @@ class AwsLambdaManager:
             **function_definition
         )
 
+    def list_aliases(self):
+        logger.info("Listing aliases")
+        response = self.aws_lambda.list_aliases(
+            FunctionName=self.config['FunctionName'],
+            MaxItems=500
+
+        )
+        return response
 
     def promote_release(self, release):
         """
